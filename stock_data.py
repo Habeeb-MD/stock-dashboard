@@ -1,8 +1,15 @@
+import logging
+
 import pandas as pd
 import streamlit as st
 
 import data_fetch
 from common_data import stock_dataframe_column_config
+
+# Create and configure logger
+logging.basicConfig(format="%(asctime)s %(message)s")
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 
 def calculate_return_on_capital_employed(symbol):
@@ -46,7 +53,7 @@ def calculate_return_on_capital_employed(symbol):
         return roce
 
     except KeyError as e:
-        print(
+        logger.warning(
             f"Unable to calculate ROCE for {symbol}, Required financial information is missing: {e}"
         )
         return None
@@ -90,22 +97,23 @@ def fetch_stock_data(symbol):
         return {}
 
 
-def fetch_multiple_stocks_data(symbols):
+def fetch_multiple_stocks_data(ticker_and_weight_list):
     """
     Fetches stock data for multiple symbols.
     Calls the fetch_stock_data for every stock and returns the combined result
 
     Parameters:
-        symbols (list of str): List of stock symbols.
+        ticker_and_weight_list (list of tuple(str,str)): List of stock's (ticker,weight).
 
     Returns:
         pandas.DataFrame: A DataFrame containing collected stock data.
     """
     stock_details = []
-    for symbol in symbols:
-        dt = fetch_stock_data(symbol)
-        if dt:
-            stock_details.append(dt)
+    for symbol, weight in ticker_and_weight_list:
+        data_dict = fetch_stock_data(symbol)
+        if data_dict:
+            data_dict["Weight"] = weight
+            stock_details.append(data_dict)
     return pd.DataFrame(stock_details)
 
 

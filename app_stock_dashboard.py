@@ -13,7 +13,7 @@ from common_data import (
 )
 from key_metrics import display_key_metrics
 from quarterly_financials import display_quarterly_stats
-# Importing module functions from other files
+# Importing module functions
 from ratios import display_financial_ratios
 from returns import display_returns
 from stock_data import fetch_multiple_stocks_data, display_industry_wide_stock_data
@@ -90,11 +90,11 @@ if len(background_thread_details) == 0:
     )
     start_background_task()
     print(data_cache_available, background_thread_details)
-    time.sleep(2 * 60)
+    time.sleep(3 * 60)
 
 if data_cache_available.qsize() == 0:
     st.write(
-        "Please wait cache while update is in process......\nRefresh Page to check status"
+        "App is starting......\nPlease wait while cache update is in process......\nRefresh Page to check status"
     )
 else:
     # Get SP500 tickers
@@ -120,10 +120,15 @@ else:
         )
 
     # Apply sector filter to tickers
-    filtered_tickers_by_sector = [
-        symbol_and_weight[0]
-        for symbol_and_weight in sector_wise_stock_symbol_and_weight.get(sector_choice)
-    ]
+    filtered_tickers_and_weight_by_sector = sector_wise_stock_symbol_and_weight.get(
+        sector_choice
+    )
+    filtered_tickers_by_sector = list(
+        map(
+            lambda ticker_and_weight: ticker_and_weight[0],
+            filtered_tickers_and_weight_by_sector,
+        )
+    )
 
     with col2:
         entries_per_page = st.number_input(
@@ -151,10 +156,14 @@ else:
     # filtered_tickers based on page
     start = (page - 1) * entries_per_page
     end = start + entries_per_page
-    filtered_tickers_by_sector_and_page_cnt = filtered_tickers_by_sector[start:end]
+    filtered_tickers_and_weight_by_sector_and_page_cnt = (
+        filtered_tickers_and_weight_by_sector[start:end]
+    )
 
     # fetch data for filtered_tickers on given page
-    filtered_data = fetch_multiple_stocks_data(filtered_tickers_by_sector_and_page_cnt)
+    filtered_data = fetch_multiple_stocks_data(
+        filtered_tickers_and_weight_by_sector_and_page_cnt
+    )
 
     # Display the data table with industry data
     display_industry_wide_stock_data(filtered_data, selected_columns)

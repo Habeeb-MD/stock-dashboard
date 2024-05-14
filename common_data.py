@@ -3,6 +3,7 @@ import streamlit as st
 industry_dataframe_default_cols = [
     "Symbol",
     "Name",
+    "Weight",
     "Current Price",
     "Price to Earning",
     "Market Capitalization",
@@ -18,6 +19,7 @@ industry_dataframe_default_cols = [
 industry_dataframe_all_cols = [
     "Symbol",
     "Name",
+    "Weight",
     "Sector",
     "Current Price",
     "Price to Earning",  # Trailing P/E	https://finance.yahoo.com/quote/MSFT/key-statistics
@@ -34,6 +36,11 @@ industry_dataframe_all_cols = [
 ]
 
 stock_dataframe_column_config = {
+    "Weight": st.column_config.NumberColumn(
+        "Weight (%)",
+        format="%.2f",
+        help="Weight(%) of asset in Index by Market Capitalization",
+    ),
     "Price to Earning": st.column_config.NumberColumn(
         "Price to Earning(PE) Ratio",
         format="%.2f",
