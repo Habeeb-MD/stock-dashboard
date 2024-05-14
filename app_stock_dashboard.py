@@ -13,7 +13,7 @@ from common_data import (
 )
 from key_metrics import display_key_metrics
 from quarterly_financials import display_quarterly_stats
-# Importing module functions
+# Importing functions from other modules
 from ratios import display_financial_ratios
 from returns import display_returns
 from stock_data import fetch_multiple_stocks_data, display_industry_wide_stock_data
