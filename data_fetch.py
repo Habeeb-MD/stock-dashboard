@@ -125,7 +125,7 @@ def get_sector_wise_stock_symbol_and_weight():
         dict: A dictionary with sectors as keys and lists of tuples (Symbol, Weight) as values.
 
     Raises:
-        Exception: Propagates exceptions from underlying data fetching functions.
+        Exception: Raises an exception if the required data is not accessible or if there's an unexpected structure.
     """
     try:
         tickers_sector = get_tickers_sector()
