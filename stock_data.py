@@ -1,5 +1,6 @@
-import streamlit as st
 import pandas as pd
+import streamlit as st
+
 import data_fetch
 from common_data import stock_dataframe_column_config
 
@@ -39,7 +40,7 @@ def calculate_return_on_capital_employed(symbol):
         avg_capital_employed = avg_total_assets - avg_current_liabilities
 
         if avg_capital_employed == 0:
-            return 0
+            return None
 
         roce = (ebit / avg_capital_employed) * 100
         return roce
@@ -124,7 +125,6 @@ def display_industry_wide_stock_data(filtered_data, selected_columns):
         "Net Income Latest Quarter",
         "Sales Latest Quarter",
     ]:
-        # Safe conversion handling None values using .apply() and lambda
         filtered_data[column] = filtered_data[column].apply(
             lambda x: x / 1e9 if x else None
         )

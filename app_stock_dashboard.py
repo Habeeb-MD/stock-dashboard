@@ -34,7 +34,7 @@ def get_queue():
     """
     This will return a variable which will be used for indicating that the cache has been updated successfully.
     Its value is set by background thread.
-    This function is cached to prevent streamlit from creating more than instance of data_queue
+    This function is cached to prevent streamlit from creating more than one instance of data_queue
     """
     logger.info("get_queue called ..........")
     return queue.Queue(maxsize=1)
