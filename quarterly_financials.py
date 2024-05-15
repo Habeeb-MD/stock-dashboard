@@ -1,10 +1,17 @@
-import streamlit as st
+import logging
+
 import pandas as pd
+import streamlit as st
 
 import data_fetch
+from cacheUtil import cached_with_force_update
 from common_data import financial_columns_renamed, financial_columns
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
+
+@cached_with_force_update()
 def fetch_financials(symbol):
     """
     Fetches the most recent quarterly financials for a given stock symbol.
@@ -26,7 +33,7 @@ def fetch_financials(symbol):
                 data[renamed] = fin_data.get(col, None)
             return data
         else:
-            st.warning(f"No quarterly financials available for {symbol}.")
+            logger.warning(f"No quarterly financials available for {symbol}.")
             return {
                 key: None
                 for key in (
@@ -34,7 +41,7 @@ def fetch_financials(symbol):
                 )
             }
     except Exception as e:
-        st.error(f"Error fetching quarterly financials for {symbol}: {str(e)}")
+        logger.error(f"Error fetching quarterly financials for {symbol}: {str(e)}")
         return {
             key: None
             for key in (financial_columns + list(financial_columns_renamed.values()))

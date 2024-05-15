@@ -4,14 +4,15 @@ import pandas as pd
 import streamlit as st
 
 import data_fetch
+from cacheUtil import cached_with_force_update
 from common_data import stock_dataframe_column_config
 
 # Create and configure logger
-logging.basicConfig(format="%(asctime)s %(message)s")
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
+@cached_with_force_update()
 def calculate_return_on_capital_employed(symbol):
     """
     Calculate the Return on Capital Employed (ROCE) for a given stock symbol.
@@ -59,6 +60,7 @@ def calculate_return_on_capital_employed(symbol):
         return None
 
 
+@cached_with_force_update()
 def fetch_stock_data(symbol):
     """
     Fetches a variety of financial details for a given stock symbol.
@@ -93,7 +95,7 @@ def fetch_stock_data(symbol):
         return data
 
     except Exception as e:
-        st.warning(f"Failed to fetch data for {symbol}: {e}")
+        logger.warning(f"Failed to fetch data for {symbol}: {e}")
         return {}
 
 

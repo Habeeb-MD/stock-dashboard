@@ -1,10 +1,12 @@
-import streamlit as st
 import pandas as pd
+import streamlit as st
 
 import data_fetch
+from cacheUtil import cached_with_force_update
 from common_data import default_time_periods
 
 
+@cached_with_force_update()
 def calculate_returns(symbol, periods=None):
     """
     Calculates the cumulative returns for different time periods for a given stock symbol.

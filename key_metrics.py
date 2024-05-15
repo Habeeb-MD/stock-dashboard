@@ -1,10 +1,17 @@
+import logging
+
 import pandas as pd
 import streamlit as st
 
 import data_fetch
+from cacheUtil import cached_with_force_update
 from stock_data import calculate_return_on_capital_employed
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
+
+@cached_with_force_update()
 def fetch_key_metrics(symbol):
     """
     Fetch and return key financial metrics for a given stock symbol.
@@ -45,7 +52,7 @@ def fetch_key_metrics(symbol):
         }
         return metrics
     except Exception as e:
-        st.error(f"Error fetching data for {symbol}: {str(e)}")
+        logger.error(f"Error fetching data for {symbol}: {str(e)}")
         return {}
 
 

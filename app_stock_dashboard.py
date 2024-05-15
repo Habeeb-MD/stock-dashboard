@@ -1,11 +1,12 @@
+import concurrent.futures
 import logging
-import queue
 import threading
 import time
 
 import streamlit as st
 
 import data_fetch
+from ProducerConsumer import ProducerConsumer
 from common_data import (
     industry_dataframe_default_cols,
     industry_dataframe_all_cols,
@@ -21,7 +22,7 @@ from time_series import fetch_time_series_data_and_plot
 
 # Create and configure logger
 logging.basicConfig(format="%(asctime)s %(message)s")
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
@@ -30,44 +31,52 @@ st.set_page_config(layout="wide", page_title="Stock Dashboard")
 
 
 @st.cache_resource()
-def get_queue():
+def get_thread_event(event_name):
     """
-    This will return a variable which will be used for indicating that the cache has been updated successfully.
-    Its value is set by background thread.
     This function is cached to prevent streamlit from creating more than one instance of data_queue
     """
-    logger.info("get_queue called ..........")
-    return queue.Queue(maxsize=1)
+    logger.info(f"get_thread_event called for {event_name}..........")
+    return threading.Event()
 
 
-@st.cache_resource()
-def get_background_thread_details():
-    """
-    This is for creating the background thread, It will be empty at the start and should be triggered only once.
-    This function is cached to prevent streamlit from creating background thread more than once.
-    """
-    logger.info("get_last_update_detail called ..........")
-    return list()
+# This is for creating the background thread, It should be triggered only once.
+# If this event is set, it means that the background thread is already exist.
+background_thread_event = get_thread_event("start_background_thread")
+
+# This will return a event which will be used for indicating that the cache is available.
+# Its value is set by background thread.
+data_cache_available_event = get_thread_event("data_cache_available")
 
 
-data_cache_available = get_queue()
-background_thread_details = get_background_thread_details()
-
-
-st.title("Sector-Based Stock Dashboard | S&P500")
+st.title("Stock Dashboard | S&P500")
 
 _cnt = 10
 _sleep_time = 3600
 
 
-def background_task(cnt):
+def background_task(count):
     while True:
         logger.info(
             f"background_task started for updating the cache @{time.ctime(time.time())}"
         )
-        logger.info(data_fetch.run_cache_update(cnt))
-        if data_cache_available.empty():
-            data_cache_available.put("Cache updated successfully")
+
+        producer_consumer = ProducerConsumer(count)
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            future_to_method = {
+                executor.submit(producer_consumer.producer): "producer_future",
+                executor.submit(producer_consumer.consumer): "consumer_future",
+            }
+            # This will yield future result as they are finished
+            for future in concurrent.futures.as_completed(future_to_method):
+                method = future_to_method[future]
+                data = future.result()
+                logger.info(method + "->" + data)
+
+        # When both threads are done we can let the main thread know we are done updating the cache
+        # and set the data_cache_available event if not already set
+        if not data_cache_available_event.is_set():
+            data_cache_available_event.set()
         logger.info("cache update finished")
         time.sleep(_sleep_time)
 
@@ -78,23 +87,22 @@ def start_background_task():
         args=(_cnt,),
     )
     thread.daemon = True  # Ensure the thread does not prevent the process from exiting
+    logger.info(f"background_thread created @ {time.ctime(time.time())}")
     thread.start()
 
 
-if len(background_thread_details) == 0:
+if not background_thread_event.is_set():
     # This will run only one time at start when application will start
-    # Once the background_thread_details is filled it will not run again.
-    logger.info("last_update_detail is empty")
-    background_thread_details.append(
-        f"background_thread created @ {time.ctime(time.time())}"
-    )
+    # Once the background_thread_event is set it will not run again.
+    logger.info("background_thread_event is not set")
+    background_thread_event.set()
     start_background_task()
-    print(data_cache_available, background_thread_details)
+    print(data_cache_available_event, background_thread_event)
     time.sleep(3 * 60)
 
-if data_cache_available.qsize() == 0:
+if not data_cache_available_event.is_set():
     st.write(
-        "App is starting......\nPlease wait while cache update is in process......\nRefresh Page to check status"
+        "App is starting......  \nPlease wait while cache update is in process......  \nRefresh Page to check status"
     )
 else:
     # Get SP500 tickers

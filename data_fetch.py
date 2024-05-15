@@ -1,56 +1,14 @@
-import functools
 import logging
-import time
 from io import StringIO
 
 import pandas as pd
 import requests
 import yfinance as yf
-from cachetools import TTLCache
 
-from common_data import default_time_periods
+from cacheUtil import cached_with_force_update
 
-logging.basicConfig(format="%(asctime)s %(message)s")
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-
-
-def cached_with_force_update(maxsize=3000, ttl=3600):
-    """
-    Decorator to cache the output of a function, with the option to force an update.
-    This is required because in some case we may want to update cache before it expires
-
-    Parameters:
-        maxsize (int): Maximum size of the cache.
-        ttl (int): Time to live for the cache entries in seconds.
-    """
-
-    def decorator(func):
-        local_cache = TTLCache(maxsize, ttl)
-
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            force_update = kwargs.pop("force_update", False)
-            cache_key = args
-
-            if force_update or cache_key not in local_cache:
-                logger.info(f"Updating cache for function: {func.__name__}{args}")
-                local_cache.pop(cache_key, None)  # Clear cache entry if forcing update
-                value = None
-                try:
-                    value = func(*args, **kwargs)
-                    local_cache[cache_key] = value
-                except Exception as e:
-                    logger.error(
-                        f"Error in {func.__name__} with {args} and {kwargs}: {str(e)}"
-                    )
-                return value
-
-            return local_cache.get(cache_key)
-
-        return wrapper
-
-    return decorator
 
 
 @cached_with_force_update()
@@ -157,47 +115,6 @@ def get_sector_wise_stock_symbol_and_weight():
         logger.error(
             f"Failed to generate sector-wise stock symbol and weight data: {e}"
         )
-
-
-@cached_with_force_update()
-def run_cache_update(count):
-    """
-    Updates cached data for a set of financial functions for top `count` stocks in the S&P 500 Index.
-
-    Parameters:
-        count (int): Number of top records to update.
-
-    Returns:
-        str: Message indicating successful cache update with timestamp.
-    """
-    try:
-        sector_wise_stock_symbol_and_weight_dict = (
-            get_sector_wise_stock_symbol_and_weight()
-        )
-        functions_list = [
-            info,
-            annual_financials,
-            annual_balance_sheet,
-            quarterly_financials,
-            quarterly_balance_sheet,
-        ]
-
-        for (
-            sector,
-            symbol_and_weight_list,
-        ) in sector_wise_stock_symbol_and_weight_dict.items():
-            if sector != "S&P 500 Index":
-                for symbol_and_weight in symbol_and_weight_list[:count]:
-                    symbol = symbol_and_weight[0]
-                    for func in functions_list:
-                        func(symbol, force_update=True)
-                    for period in default_time_periods.values():
-                        history(symbol, period, force_update=True)
-
-        return f"Successful cache update @{time.ctime(time.time())}"
-
-    except Exception as e:
-        logging.error(f"Failed to run cache update due to: {e}")
 
 
 @cached_with_force_update()

@@ -1,6 +1,13 @@
-import streamlit as st
+import logging
+
 import plotly.graph_objects as go
+import streamlit as st
+
 import data_fetch
+from cacheUtil import cached_with_force_update
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def _handle_division(numerator, denominator):
@@ -20,6 +27,7 @@ def _handle_division(numerator, denominator):
         return None
 
 
+@cached_with_force_update()
 def _fetch_financial_ratio_for_single_symbol(symbol):
     """
     Fetches and calculates key financial ratios for a given stock symbol using annual and quarterly data.
@@ -37,7 +45,7 @@ def _fetch_financial_ratio_for_single_symbol(symbol):
         balance_sheet = data_fetch.quarterly_balance_sheet(symbol).T
 
         if financials.empty or balance_sheet.empty:
-            st.warning(f"No data available for {symbol}")
+            logger.warning(f"No data available for {symbol}")
             return {}
 
         ratios = {
@@ -70,7 +78,7 @@ def _fetch_financial_ratio_for_single_symbol(symbol):
             ratios[column] = ratios[column].apply(lambda x: x * 100 if x else None)
         return ratios
     except Exception as e:
-        st.error(f"Failed to fetch data for {symbol}: {str(e)}")
+        logger.error(f"Failed to fetch data for {symbol}: {str(e)}")
         return {}
 
 
