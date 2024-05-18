@@ -160,3 +160,6 @@ default_time_periods = {
     "3 Years": "3y",
     "5 Years": "5y",
 }
+
+# available_time_series for plotting
+available_time_series = ["Open", "High", "Low", "Close", "Volume"]

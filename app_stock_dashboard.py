@@ -3,6 +3,7 @@ import logging
 import threading
 import time
 
+import requests
 import streamlit as st
 
 import data_fetch
@@ -11,6 +12,7 @@ from common_data import (
     industry_dataframe_default_cols,
     industry_dataframe_all_cols,
     all_time_periods,
+    available_time_series,
 )
 from key_metrics import display_key_metrics
 from quarterly_financials import display_quarterly_stats
@@ -52,6 +54,13 @@ _cnt = 10
 _sleep_time = 3600
 
 
+def check_server_health():
+    url = "https://stocks-dashboard-sp500.streamlit.app/"
+    response = requests.get(url)
+    assert response.status_code == 200
+    logger.info("server is ok")
+
+
 def background_task(count):
     while True:
         logger.info(
@@ -76,6 +85,7 @@ def background_task(count):
         if not data_cache_available_event.is_set():
             data_cache_available_event.set()
         logger.info("cache update finished")
+        check_server_health()
         time.sleep(_sleep_time)
 
 
@@ -103,6 +113,20 @@ if not data_cache_available_event.is_set():
         "App is starting......  \nPlease wait while cache update is in process......  \nRefresh Page to check status"
     )
 else:
+
+    # Initialize session state for tracking selected_columns,selected tickers,time period,time series,page_num and
+    # entries_per_page
+    if "selected_columns" not in st.session_state:
+        st.session_state.selected_columns = industry_dataframe_default_cols
+    if "selected_time_period_index" not in st.session_state:
+        st.session_state.selected_time_period_index = 4  # for ytd
+    if "selected_time_series_index" not in st.session_state:
+        st.session_state.selected_time_series_index = 3  # close
+    if "page_num" not in st.session_state:
+        st.session_state.page_num = 1
+    if "entries_per_page" not in st.session_state:
+        st.session_state.entries_per_page = _cnt
+
     # Sidebar for navigation
     st.sidebar.title("Navigation")
     section = st.sidebar.radio(
@@ -140,12 +164,17 @@ else:
                 filtered_tickers_and_weight_by_sector,
             )
         )
+        if "selected_tickers" not in st.session_state:
+            st.session_state.selected_tickers = filtered_tickers_by_sector[
+                : min(3, _cnt)
+            ]
         with col2:
             selected_stocks = st.multiselect(
                 "Select stock symbols",
                 filtered_tickers_by_sector,
-                default=filtered_tickers_by_sector[: min(3, _cnt)],
+                default=st.session_state.selected_tickers,
             )
+        st.session_state.selected_tickers = selected_stocks
         return selected_stocks
 
     # Navigation handling
@@ -173,14 +202,20 @@ else:
                 "Results per Page",
                 min_value=1,
                 max_value=len(filtered_tickers_by_sector) + 10,
-                value=_cnt,
+                value=st.session_state.entries_per_page,
             )
+            st.session_state.entries_per_page = entries_per_page
             total_pages = (len(filtered_tickers_by_sector) - 1) // entries_per_page + 1
 
         with col3:
             page = st.number_input(
-                "Page", min_value=1, max_value=total_pages, value=1, step=1
+                "Page",
+                min_value=1,
+                max_value=total_pages,
+                value=st.session_state.page_num,
+                step=1,
             )
+            st.session_state.page_num = page
 
         with col4:
             popover = st.popover("Select Columns to Display")
@@ -188,10 +223,12 @@ else:
                 selected_columns = st.multiselect(
                     "Choose Columns",
                     options=industry_dataframe_all_cols,
-                    default=industry_dataframe_default_cols,
+                    default=st.session_state.selected_columns,
                 )
+                # saving state
+                st.session_state.selected_columns = selected_columns
 
-        # filtered_tickers based on page
+        # filtered_tickers based on page number and entries_per_page
         start = (page - 1) * entries_per_page
         end = start + entries_per_page
         filtered_tickers_and_weight_by_sector_and_page_cnt = (
@@ -216,16 +253,25 @@ else:
         with col1:
             time_series = st.selectbox(
                 "Select the time series data to plot",
-                ["Open", "High", "Low", "Close", "Volume"],
-                index=3,
+                available_time_series,
+                index=st.session_state.selected_time_series_index,
+            )
+            # saving state
+            st.session_state.selected_time_series_index = available_time_series.index(
+                time_series
             )
 
         with col2:
             time_frame = st.selectbox(
                 "Select the time period for chart",
                 all_time_periods.keys(),
-                index=4,
+                index=st.session_state.selected_time_period_index,
             )
+            # saving state
+            st.session_state.selected_time_period_index = list(
+                all_time_periods.keys()
+            ).index(time_frame)
+
             time_frame = all_time_periods[time_frame]
 
         fetch_time_series_data_and_plot(selected_stocks, time_series, time_frame)
