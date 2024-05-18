@@ -163,3 +163,13 @@ default_time_periods = {
 
 # available_time_series for plotting
 available_time_series = ["Open", "High", "Low", "Close", "Volume"]
+
+# sidebar menu
+menus = [
+    "Industry Data",
+    "Stock Details",
+    "Financials",
+    "Metrics",
+    "Ratios",
+    "Returns",
+]

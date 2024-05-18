@@ -5,6 +5,7 @@ import time
 
 import requests
 import streamlit as st
+import streamlit_antd_components as sac
 
 import data_fetch
 from ProducerConsumer import ProducerConsumer
@@ -13,6 +14,7 @@ from common_data import (
     industry_dataframe_all_cols,
     all_time_periods,
     available_time_series,
+    menus,
 )
 from key_metrics import display_key_metrics
 from quarterly_financials import display_quarterly_stats
@@ -128,18 +130,17 @@ else:
         st.session_state.entries_per_page = _cnt
 
     # Sidebar for navigation
-    st.sidebar.title("Navigation")
-    section = st.sidebar.radio(
-        "Go to",
-        [
-            "Industry Data",
-            "Stock Details",
-            "Financials",
-            "Metrics",
-            "Ratios",
-            "Returns",
-        ],
-    )
+    with st.sidebar.container():
+        # title
+        st.subheader("Navigation")
+        # menu
+        menu = sac.menu(
+            items=[sac.MenuItem(el) for el in menus],
+            key="menu",
+            open_all=True,
+            indent=20,
+            format_func="title",
+        )
 
     # Define a function to delete the session state entry
     def delete_session_state_variable(state_variable):
@@ -184,7 +185,7 @@ else:
         return selected_stocks
 
     # Navigation handling
-    if section == "Industry Data":
+    if menu == "Industry Data":
         # Layout configuration with Streamlit columns
         col1, col2, col3, col4 = st.columns([2, 1, 1, 3])
         with col1:
@@ -251,7 +252,7 @@ else:
         display_industry_wide_stock_data(filtered_data, selected_columns)
         st.write(f"Showing page {page} of {total_pages}")
 
-    elif section == "Stock Details":
+    elif menu == "Stock Details":
         selected_stocks = sector_filter_and_ticker_selector()
 
         # Time series and period selection for charts
@@ -282,18 +283,18 @@ else:
 
         fetch_time_series_data_and_plot(selected_stocks, time_series, time_frame)
 
-    elif section == "Financials":
+    elif menu == "Financials":
         selected_stocks = sector_filter_and_ticker_selector()
         display_quarterly_stats(selected_stocks)
 
-    elif section == "Metrics":
+    elif menu == "Metrics":
         selected_stocks = sector_filter_and_ticker_selector()
         display_key_metrics(selected_stocks)
 
-    elif section == "Ratios":
+    elif menu == "Ratios":
         selected_stocks = sector_filter_and_ticker_selector()
         display_financial_ratios(selected_stocks)
 
-    elif section == "Returns":
+    elif menu == "Returns":
         selected_stocks = sector_filter_and_ticker_selector()
         display_returns(selected_stocks)

@@ -4,3 +4,4 @@ plotly~=5.22.0
 yfinance~=0.2.38
 requests~=2.31.0
 cachetools~=5.3.3
+streamlit_antd_components~=0.3.2
