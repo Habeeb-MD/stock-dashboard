@@ -25,7 +25,6 @@ logging.basicConfig(format="%(asctime)s %(message)s")
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-
 # Set up the page configuration for Streamlit
 st.set_page_config(layout="wide", page_title="Stock Dashboard")
 
@@ -43,10 +42,9 @@ def get_thread_event(event_name):
 # If this event is set, it means that the background thread is already exist.
 background_thread_event = get_thread_event("start_background_thread")
 
-# This will return a event which will be used for indicating that the cache is available.
+# This will return an event which will be used for indicating that the cache is available.
 # Its value is set by background thread.
 data_cache_available_event = get_thread_event("data_cache_available")
-
 
 st.title("Stock Dashboard | S&P500")
 
@@ -105,107 +103,145 @@ if not data_cache_available_event.is_set():
         "App is starting......  \nPlease wait while cache update is in process......  \nRefresh Page to check status"
     )
 else:
+    # Sidebar for navigation
+    st.sidebar.title("Navigation")
+    section = st.sidebar.radio(
+        "Go to",
+        [
+            "Industry Data",
+            "Stock Details",
+            "Financials",
+            "Metrics",
+            "Ratios",
+            "Returns",
+        ],
+    )
+
     # Get SP500 tickers
     sector_wise_stock_symbol_and_weight = (
         data_fetch.get_sector_wise_stock_symbol_and_weight()
     )
     sector_names = data_fetch.get_gics_sector()
 
-    # Initialize session state for tracking data fetching
-    if "fetch_data" not in st.session_state:
-        st.session_state.fetch_data = False
-
-    def set_fetch_data():
-        """Trigger for setting session state to indicate data needs to be fetched."""
-        st.session_state.fetch_data = True
-
-    # Layout configuration with Streamlit columns
-    col1, col2, col3, col4 = st.columns([2, 1, 1, 3])
-    with col1:
-        sector_choice = st.selectbox(
-            "Filter by Sector",
-            sector_names,
+    def sector_filter_and_ticker_selector():
+        col1, col2 = st.columns([2, 2])
+        with col1:
+            sector_choice = st.selectbox(
+                "Filter by Sector",
+                sector_names,
+            )
+        # Apply sector filter to tickers
+        filtered_tickers_and_weight_by_sector = sector_wise_stock_symbol_and_weight.get(
+            sector_choice
         )
-
-    # Apply sector filter to tickers
-    filtered_tickers_and_weight_by_sector = sector_wise_stock_symbol_and_weight.get(
-        sector_choice
-    )
-    filtered_tickers_by_sector = list(
-        map(
-            lambda ticker_and_weight: ticker_and_weight[0],
-            filtered_tickers_and_weight_by_sector,
+        filtered_tickers_by_sector = list(
+            map(
+                lambda ticker_and_weight: ticker_and_weight[0],
+                filtered_tickers_and_weight_by_sector,
+            )
         )
-    )
+        with col2:
+            selected_stocks = st.multiselect(
+                "Select stock symbols",
+                filtered_tickers_by_sector,
+                default=filtered_tickers_by_sector[: min(3, _cnt)],
+            )
+        return selected_stocks
 
-    with col2:
-        entries_per_page = st.number_input(
-            "Results per Page",
-            min_value=1,
-            max_value=len(filtered_tickers_by_sector) + 10,
-            value=_cnt,
-        )
-        total_pages = (len(filtered_tickers_by_sector) - 1) // entries_per_page + 1
-
-    with col3:
-        page = st.number_input(
-            "Page", min_value=1, max_value=total_pages, value=1, step=1
-        )
-
-    with col4:
-        popover = st.popover("Select Columns to Display")
-        with popover:
-            selected_columns = st.multiselect(
-                "Choose Columns",
-                options=industry_dataframe_all_cols,
-                default=industry_dataframe_default_cols,
+    # Navigation handling
+    if section == "Industry Data":
+        # Layout configuration with Streamlit columns
+        col1, col2, col3, col4 = st.columns([2, 1, 1, 3])
+        with col1:
+            sector_choice = st.selectbox(
+                "Filter by Sector",
+                sector_names,
             )
 
-    # filtered_tickers based on page
-    start = (page - 1) * entries_per_page
-    end = start + entries_per_page
-    filtered_tickers_and_weight_by_sector_and_page_cnt = (
-        filtered_tickers_and_weight_by_sector[start:end]
-    )
+        # Apply sector filter to tickers
+        filtered_tickers_and_weight_by_sector = sector_wise_stock_symbol_and_weight.get(
+            sector_choice
+        )
+        filtered_tickers_by_sector = list(
+            map(
+                lambda ticker_and_weight: ticker_and_weight[0],
+                filtered_tickers_and_weight_by_sector,
+            )
+        )
+        with col2:
+            entries_per_page = st.number_input(
+                "Results per Page",
+                min_value=1,
+                max_value=len(filtered_tickers_by_sector) + 10,
+                value=_cnt,
+            )
+            total_pages = (len(filtered_tickers_by_sector) - 1) // entries_per_page + 1
 
-    # fetch data for filtered_tickers on given page
-    filtered_data = fetch_multiple_stocks_data(
-        filtered_tickers_and_weight_by_sector_and_page_cnt
-    )
+        with col3:
+            page = st.number_input(
+                "Page", min_value=1, max_value=total_pages, value=1, step=1
+            )
 
-    # Display the data table with industry data
-    display_industry_wide_stock_data(filtered_data, selected_columns)
+        with col4:
+            popover = st.popover("Select Columns to Display")
+            with popover:
+                selected_columns = st.multiselect(
+                    "Choose Columns",
+                    options=industry_dataframe_all_cols,
+                    default=industry_dataframe_default_cols,
+                )
 
-    # display page cnt
-    st.write(f"Showing page {page} of {total_pages}")
-
-    selected_stocks = st.multiselect(
-        "Select stock symbols",
-        filtered_tickers_by_sector,
-        default=filtered_tickers_by_sector[: min(3, _cnt)],
-    )
-
-    # Time series and period selection for charts
-    col1, col2 = st.columns(2)
-    with col1:
-        time_series = st.selectbox(
-            "Select the time series data to plot",
-            ["Open", "High", "Low", "Close", "Volume"],
-            index=3,
+        # filtered_tickers based on page
+        start = (page - 1) * entries_per_page
+        end = start + entries_per_page
+        filtered_tickers_and_weight_by_sector_and_page_cnt = (
+            filtered_tickers_and_weight_by_sector[start:end]
         )
 
-    with col2:
-        time_frame = st.selectbox(
-            "Select the time period for chart",
-            all_time_periods.keys(),
-            index=4,
+        # fetch data for filtered_tickers on given page
+        filtered_data = fetch_multiple_stocks_data(
+            filtered_tickers_and_weight_by_sector_and_page_cnt
         )
-        time_frame = all_time_periods[time_frame]
 
-    # Button to trigger data fetching and display
-    if st.button("Fetch Data", on_click=set_fetch_data) or st.session_state.fetch_data:
+        st.header("Industry Data")
+        # Display the data table with industry data
+        display_industry_wide_stock_data(filtered_data, selected_columns)
+        st.write(f"Showing page {page} of {total_pages}")
+
+    elif section == "Stock Details":
+        selected_stocks = sector_filter_and_ticker_selector()
+
+        # Time series and period selection for charts
+        col1, col2 = st.columns(2)
+        with col1:
+            time_series = st.selectbox(
+                "Select the time series data to plot",
+                ["Open", "High", "Low", "Close", "Volume"],
+                index=3,
+            )
+
+        with col2:
+            time_frame = st.selectbox(
+                "Select the time period for chart",
+                all_time_periods.keys(),
+                index=4,
+            )
+            time_frame = all_time_periods[time_frame]
+
         fetch_time_series_data_and_plot(selected_stocks, time_series, time_frame)
-        display_key_metrics(selected_stocks)
+
+    elif section == "Financials":
+        selected_stocks = sector_filter_and_ticker_selector()
         display_quarterly_stats(selected_stocks)
+
+    elif section == "Metrics":
+        selected_stocks = sector_filter_and_ticker_selector()
+        display_key_metrics(selected_stocks)
+
+    elif section == "Ratios":
+        selected_stocks = sector_filter_and_ticker_selector()
         display_financial_ratios(selected_stocks)
+
+    elif section == "Returns":
+        selected_stocks = sector_filter_and_ticker_selector()
         display_returns(selected_stocks)
