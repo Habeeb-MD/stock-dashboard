@@ -143,9 +143,10 @@ else:
         )
 
     # Define a function to delete the session state entry
-    def delete_session_state_variable(state_variable):
-        if state_variable in st.session_state:
-            del st.session_state[state_variable]
+    def delete_session_state_variable(*state_variables):
+        for state_variable in state_variables:
+            if state_variable in st.session_state:
+                del st.session_state[state_variable]
 
     # Get SP500 tickers
     sector_wise_stock_symbol_and_weight = (
@@ -159,7 +160,10 @@ else:
             sector_choice = st.selectbox(
                 "Filter by Sector",
                 sector_names,
-                on_change=lambda: delete_session_state_variable("selected_tickers"),
+                on_change=lambda: delete_session_state_variable(
+                    "selected_tickers", "page_num", "entries_per_page"
+                ),  # it's better to delete the "page_num", "entries_per_page" states on changing sectors because
+                # number of tickers vary from sector to sector
             )
         # Apply sector filter to tickers
         filtered_tickers_and_weight_by_sector = sector_wise_stock_symbol_and_weight.get(
@@ -192,6 +196,10 @@ else:
             sector_choice = st.selectbox(
                 "Filter by Sector",
                 sector_names,
+                on_change=lambda: delete_session_state_variable(
+                    "selected_tickers", "page_num", "entries_per_page"
+                ),  # it's better to delete the "page_num", "entries_per_page" states on changing sectors because
+                # number of tickers vary from sector to sector
             )
 
         # Apply sector filter to tickers
@@ -208,7 +216,7 @@ else:
             entries_per_page = st.number_input(
                 "Results per Page",
                 min_value=1,
-                max_value=len(filtered_tickers_by_sector) + 10,
+                max_value=len(filtered_tickers_by_sector),
                 value=st.session_state.entries_per_page,
             )
             st.session_state.entries_per_page = entries_per_page
