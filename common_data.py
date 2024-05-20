@@ -144,7 +144,7 @@ all_time_periods = {
     "6 Months": "6mo",
     "YTD": "ytd",
     "1 Year": "1y",
-    "3 Years": "3y",
+    "2 Years": "2y",
     "5 Years": "5y",
     "10 Years": "10y",
     "MAX": "max",
@@ -157,7 +157,7 @@ default_time_periods = {
     "6 Months": "6mo",
     "YTD": "ytd",
     "1 Year": "1y",
-    "3 Years": "3y",
+    "2 Years": "2y",
     "5 Years": "5y",
 }
 

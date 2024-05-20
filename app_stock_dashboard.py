@@ -34,21 +34,22 @@ st.set_page_config(layout="wide", page_title="Stock Dashboard")
 
 
 @st.cache_resource()
-def get_thread_event(event_name):
+def get_data_cache_available_event_and_background_thread_detail():
     """
-    This function is cached to prevent streamlit from creating more than one instance of data_queue
+    This function is cached to prevent streamlit from creating more than one instance of shared_dict
     """
-    logger.info(f"get_thread_event called for {event_name}..........")
-    return threading.Event()
+    logger.info(
+        f"get_data_cache_available_event_and_background_thread_detail called for data_cache_available_event.........."
+    )
+    _shared_dict = {
+        "background_thread_detail": None,
+        "data_cache_available_event": threading.Event(),  # "data_cache_available_event"
+    }
+    return _shared_dict
 
 
-# This is for creating the background thread, It should be triggered only once.
-# If this event is set, it means that the background thread is already exist.
-background_thread_event = get_thread_event("start_background_thread")
-
-# This will return an event which will be used for indicating that the cache is available.
-# Its value is set by background thread.
-data_cache_available_event = get_thread_event("data_cache_available")
+shared_dict = get_data_cache_available_event_and_background_thread_detail()
+data_cache_available_event = shared_dict.get("data_cache_available_event")
 
 st.title("Stock Dashboard | S&P500")
 
@@ -87,8 +88,10 @@ def background_task(count):
         if not data_cache_available_event.is_set():
             data_cache_available_event.set()
         logger.info("cache update finished")
+
+        time.sleep(_sleep_time / 2)
         check_server_health()
-        time.sleep(_sleep_time)
+        time.sleep(_sleep_time / 2)
 
 
 def start_background_task():
@@ -99,16 +102,32 @@ def start_background_task():
     thread.daemon = True  # Ensure the thread does not prevent the process from exiting
     logger.info(f"background_thread created @ {time.ctime(time.time())}")
     thread.start()
+    shared_dict["background_thread_detail"] = thread.ident
+    logger.info(
+        "background_thread_detail :- %d", shared_dict["background_thread_detail"]
+    )
 
 
-if not background_thread_event.is_set():
-    # This will run only one time at start when application will start
-    # Once the background_thread_event is set it will not run again.
-    logger.info("background_thread_event is not set")
-    background_thread_event.set()
-    start_background_task()
-    print(data_cache_available_event, background_thread_event)
-    time.sleep(3 * 60)
+# Function to verify password and start the background task
+def verify_password():
+    if st.session_state["password"] == st.secrets.credentials["password"]:
+        # This will run only one time at start when application will start
+        # Once the background_thread_event is set it will not run again.
+        start_background_task()
+        st.success("Background task started.")
+        time.sleep(4 * 60)
+    else:
+        st.error("Incorrect password.")
+
+
+if not shared_dict.get("background_thread_detail"):
+    # Password input
+    if "password" not in st.session_state:
+        st.session_state.password = ""
+    st.text_input(
+        "Enter password to start background task:", type="password", key="password"
+    )
+    st.button("Submit", on_click=verify_password)
 
 if not data_cache_available_event.is_set():
     st.write(
