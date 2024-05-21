@@ -168,7 +168,7 @@ available_time_series = ["Open", "High", "Low", "Close", "Volume"]
 menus = [
     "Industry Data",
     "Stock Details",
-    "Financials",
+    "Quarterly Financials",
     "Metrics",
     "Ratios",
     "Returns",

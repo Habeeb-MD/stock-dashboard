@@ -9,9 +9,9 @@ from key_metrics import fetch_key_metrics
 from quarterly_financials import fetch_financials
 from ratios import _fetch_financial_ratio_for_single_symbol
 from returns import calculate_returns
-from stock_data import fetch_stock_data
+from stock_data import fetch_stock_data, calculate_return_on_capital_employed
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
@@ -57,7 +57,7 @@ class ProducerConsumer:
 
                         # putting this symbol in queue -> now consumer can consume/perform calc on this stock
                         self.queue.put(symbol)
-                        logging.info("Producer :- added a new symbol: %s", symbol)
+                        logger.debug("Producer :- added a new symbol: %s", symbol)
 
             logger.info("Producer : Finished its task. Exiting ....")
             # set this event to indicate that the producer is done with its task and now consumer can also quit
@@ -77,11 +77,12 @@ class ProducerConsumer:
             symbol = self.queue.get()
             logging.info("Consumer :- calculating stats for symbol: %s", symbol)
             functions_list = [
+                calculate_return_on_capital_employed,
+                fetch_stock_data,
                 fetch_key_metrics,
                 _fetch_financial_ratio_for_single_symbol,
                 fetch_financials,
                 calculate_returns,
-                fetch_stock_data,
             ]
             for func in functions_list:
                 func(symbol, force_update=True)

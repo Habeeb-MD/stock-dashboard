@@ -18,6 +18,7 @@ from common_data import (
 )
 from key_metrics import display_key_metrics
 from quarterly_financials import display_quarterly_stats
+
 # Importing functions from other modules
 from ratios import display_financial_ratios
 from returns import display_returns
@@ -25,7 +26,10 @@ from stock_data import fetch_multiple_stocks_data, display_industry_wide_stock_d
 from time_series import fetch_time_series_data_and_plot
 
 # Create and configure logger
-logging.basicConfig(format="%(asctime)s %(message)s")
+
+logging.basicConfig(
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"
+)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
@@ -54,7 +58,7 @@ data_cache_available_event = shared_dict.get("data_cache_available_event")
 st.title("Stock Dashboard | S&P500")
 
 _cnt = 10
-_sleep_time = 3600
+_sleep_time = 55 * 60  # update cache 5 minutes before cache's TTL
 
 
 def check_server_health():
@@ -115,7 +119,7 @@ def verify_password():
         # Once the background_thread_event is set it will not run again.
         start_background_task()
         st.success("Background task started.")
-        time.sleep(4 * 60)
+        time.sleep(30)
     else:
         st.error("Incorrect password.")
 
@@ -125,7 +129,7 @@ if not shared_dict.get("background_thread_detail"):
     if "password" not in st.session_state:
         st.session_state.password = ""
     st.text_input(
-        "Enter password to start background task:", type="password", key="password"
+        "Enter password to start Application:", type="password", key="password"
     )
     st.button("Submit", on_click=verify_password)
 
@@ -310,7 +314,7 @@ else:
 
         fetch_time_series_data_and_plot(selected_stocks, time_series, time_frame)
 
-    elif menu == "Financials":
+    elif menu == "Quarterly Financials":
         selected_stocks = sector_filter_and_ticker_selector()
         display_quarterly_stats(selected_stocks)
 

@@ -26,7 +26,8 @@ def cached_with_force_update(maxsize=3000, ttl=3600):
             cache_key = args
 
             if force_update or cache_key not in local_cache:
-                logger.info(f"Updating cache for function: {func.__name__}{args}")
+                if not force_update:
+                    logger.info(f"Updating cache for function: {func.__name__}{args}")
                 local_cache.pop(cache_key, None)  # Clear cache entry if forcing update
                 value = None
                 try:
