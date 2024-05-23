@@ -21,7 +21,7 @@ class ProducerConsumer:
         self.queue = queue.Queue(
             maxsize=count * 11
         )  # multiplying by 11 because 11 is # of gics sectors
-        self.event = threading.Event()
+        self.sentinel_event = threading.Event()
 
     def producer(self):
         """
@@ -62,30 +62,35 @@ class ProducerConsumer:
             logger.info("Producer : Finished its task. Exiting ....")
             # set this event to indicate that the producer is done with its task and now consumer can also quit
             # after finishing its calculations
-            self.event.set()
+            self.sentinel_event.set()
             return f"Producer :- Successful Update @{time.ctime(time.time())}"
 
         except Exception as e:
-            self.event.set()  # don't let the consumer waiting in case of error in producer
-            logging.error(f"Failed to run cache update due to: {e}")
+            self.sentinel_event.set()  # don't let the consumer waiting in case of error in producer
+            logger.error(f"Producer :- Failed to run cache update due to: {e}")
+            return f"Producer :- Failed to run cache update due to: {e}"
 
     def consumer(self):
         """Based on symbol present in Queue perform calculations"""
 
-        # Run this until queue is not empty and event is not triggered
-        while not self.event.is_set() or not self.queue.empty():
-            symbol = self.queue.get()
-            logging.info("Consumer :- calculating stats for symbol: %s", symbol)
-            functions_list = [
-                calculate_return_on_capital_employed,
-                fetch_stock_data,
-                fetch_key_metrics,
-                _fetch_financial_ratio_for_single_symbol,
-                fetch_financials,
-                calculate_returns,
-            ]
-            for func in functions_list:
-                func(symbol, force_update=True)
+        try:
+            # Run this until queue is not empty and event is not triggered
+            while not self.sentinel_event.is_set():
+                if not self.queue.empty():
+                    symbol = self.queue.get()
+                    logger.debug("Consumer :- calculating stats for symbol: %s", symbol)
+                    functions_list = [
+                        calculate_return_on_capital_employed,
+                        fetch_stock_data,
+                        fetch_key_metrics,
+                        _fetch_financial_ratio_for_single_symbol,
+                        fetch_financials,
+                        calculate_returns,
+                    ]
+                    for func in functions_list:
+                        func(symbol, force_update=True)
+        except Exception as e:
+            logger.error(f"Consumer:- Error occurred while updating cache: {e}")
 
-        logging.info("Consumer : Finished its task. Exiting ....")
+        logger.info("Consumer : Finished its task. Exiting ....")
         return f"Consumer :- Successful Update @{time.ctime(time.time())}"

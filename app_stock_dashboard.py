@@ -1,5 +1,6 @@
 import concurrent.futures
 import logging
+import resource
 import threading
 import time
 
@@ -18,7 +19,6 @@ from common_data import (
 )
 from key_metrics import display_key_metrics
 from quarterly_financials import display_quarterly_stats
-
 # Importing functions from other modules
 from ratios import display_financial_ratios
 from returns import display_returns
@@ -117,12 +117,22 @@ def verify_password():
     if st.session_state["password"] == st.secrets.credentials["password"]:
         # This will run only one time at start when application will start
         # Once the background_thread_event is set it will not run again.
+        logger.info(
+            f"before Background task memory consumption {resource.getrusage(resource.RUSAGE_SELF).ru_maxrss}"
+        )
         start_background_task()
         st.success("Background task started.")
         time.sleep(30)
+        logger.info(
+            f"after Background task memory consumption {resource.getrusage(resource.RUSAGE_SELF).ru_maxrss}"
+        )
     else:
         st.error("Incorrect password.")
 
+
+logger.info(f"START: Current active thread count: {threading.active_count()}")
+for thread in threading.enumerate():
+    logger.info(f"{thread.name}, {thread.daemon}, {thread.ident}")
 
 if not shared_dict.get("background_thread_detail"):
     # Password input
