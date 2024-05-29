@@ -4,10 +4,10 @@ import resource
 import threading
 import time
 
-import requests
 import streamlit as st
 import streamlit_antd_components as sac
 
+# Importing functions from other modules
 import data_fetch
 from ProducerConsumer import ProducerConsumer
 from common_data import (
@@ -19,22 +19,25 @@ from common_data import (
 )
 from key_metrics import display_key_metrics
 from quarterly_financials import display_quarterly_stats
-# Importing functions from other modules
 from ratios import display_financial_ratios
 from returns import display_returns
 from stock_data import fetch_multiple_stocks_data, display_industry_wide_stock_data
 from time_series import fetch_time_series_data_and_plot
+from utils import get_app_custom_config
+
+# Set up the page configuration for Streamlit
+st.set_page_config(layout="wide", page_title="Stock Dashboard")
 
 # Create and configure logger
 
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)",
 )
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
-# Set up the page configuration for Streamlit
-st.set_page_config(layout="wide", page_title="Stock Dashboard")
+if get_app_custom_config("debug"):
+    logger.setLevel(logging.DEBUG)
 
 
 @st.cache_resource()
@@ -42,9 +45,7 @@ def get_data_cache_available_event_and_background_thread_detail():
     """
     This function is cached to prevent streamlit from creating more than one instance of shared_dict
     """
-    logger.info(
-        f"get_data_cache_available_event_and_background_thread_detail called for data_cache_available_event.........."
-    )
+    logger.info("get_data_cache_available_event_and_background_thread_detail called...")
     _shared_dict = {
         "background_thread_detail": None,
         "data_cache_available_event": threading.Event(),  # "data_cache_available_event"
@@ -57,21 +58,14 @@ data_cache_available_event = shared_dict.get("data_cache_available_event")
 
 st.title("Stock Dashboard | S&P500")
 
-_cnt = 10
-_sleep_time = 55 * 60  # update cache 5 minutes before cache's TTL
-
-
-def check_server_health():
-    url = "https://stocks-dashboard-sp500.streamlit.app/"
-    response = requests.get(url)
-    assert response.status_code == 200
-    logger.info("server is ok")
+_cnt = get_app_custom_config("count")
+_sleep_time = get_app_custom_config("sleep_time")
 
 
 def background_task(count):
     while True:
         logger.info(
-            f"background_task started for updating the cache @{time.ctime(time.time())}"
+            f"background_task :- starting cache update @{time.ctime(time.time())}"
         )
 
         producer_consumer = ProducerConsumer(count)
@@ -93,9 +87,7 @@ def background_task(count):
             data_cache_available_event.set()
         logger.info("cache update finished")
 
-        time.sleep(_sleep_time / 2)
-        check_server_health()
-        time.sleep(_sleep_time / 2)
+        time.sleep(_sleep_time)
 
 
 def start_background_task():
@@ -107,7 +99,7 @@ def start_background_task():
     logger.info(f"background_thread created @ {time.ctime(time.time())}")
     thread.start()
     shared_dict["background_thread_detail"] = thread.ident
-    logger.info(
+    logger.debug(
         "background_thread_detail :- %d", shared_dict["background_thread_detail"]
     )
 
@@ -117,22 +109,23 @@ def verify_password():
     if st.session_state["password"] == st.secrets.credentials["password"]:
         # This will run only one time at start when application will start
         # Once the background_thread_event is set it will not run again.
-        logger.info(
+        logger.debug(
             f"before Background task memory consumption {resource.getrusage(resource.RUSAGE_SELF).ru_maxrss}"
         )
         start_background_task()
         st.success("Background task started.")
         time.sleep(30)
-        logger.info(
-            f"after Background task memory consumption {resource.getrusage(resource.RUSAGE_SELF).ru_maxrss}"
+        logger.debug(
+            f"after starting background task memory consumption {resource.getrusage(resource.RUSAGE_SELF).ru_maxrss}"
         )
     else:
         st.error("Incorrect password.")
 
 
-logger.info(f"START: Current active thread count: {threading.active_count()}")
-for thread in threading.enumerate():
-    logger.info(f"{thread.name}, {thread.daemon}, {thread.ident}")
+if get_app_custom_config("thread_details"):
+    logger.debug(f"ACTIVE_THREAD_COUNT: {threading.active_count()}")
+    for thread in threading.enumerate():
+        logger.debug(f"{thread.name}, {thread.daemon}, {thread.ident}")
 
 if not shared_dict.get("background_thread_detail"):
     # Password input

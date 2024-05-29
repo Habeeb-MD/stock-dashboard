@@ -8,7 +8,6 @@ from cacheUtil import cached_with_force_update
 from stock_data import calculate_return_on_capital_employed
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 @cached_with_force_update()

@@ -12,7 +12,6 @@ from returns import calculate_returns
 from stock_data import fetch_stock_data, calculate_return_on_capital_employed
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 class ProducerConsumer:
@@ -59,7 +58,7 @@ class ProducerConsumer:
                         self.queue.put(symbol)
                         logger.debug("Producer :- added a new symbol: %s", symbol)
 
-            logger.info("Producer : Finished its task. Exiting ....")
+            logger.debug("Producer : Finished its task. Exiting ....")
             # set this event to indicate that the producer is done with its task and now consumer can also quit
             # after finishing its calculations
             self.sentinel_event.set()
@@ -92,5 +91,5 @@ class ProducerConsumer:
         except Exception as e:
             logger.error(f"Consumer:- Error occurred while updating cache: {e}")
 
-        logger.info("Consumer : Finished its task. Exiting ....")
+        logger.debug("Consumer : Finished its task. Exiting ....")
         return f"Consumer :- Successful Update @{time.ctime(time.time())}"

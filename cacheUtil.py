@@ -3,8 +3,11 @@ import logging
 
 from cachetools import TTLCache
 
+from utils import get_app_custom_config
+
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
+if get_app_custom_config("debug"):
+    logger.setLevel(logging.DEBUG)
 
 
 def cached_with_force_update(maxsize=3000, ttl=3600):
@@ -27,7 +30,7 @@ def cached_with_force_update(maxsize=3000, ttl=3600):
 
             if force_update or cache_key not in local_cache:
                 if not force_update:
-                    logger.info(f"Updating cache for function: {func.__name__}{args}")
+                    logger.debug(f"Updating cache for function: {func.__name__}{args}")
                 local_cache.pop(cache_key, None)  # Clear cache entry if forcing update
                 value = None
                 try:

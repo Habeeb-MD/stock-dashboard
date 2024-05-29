@@ -8,7 +8,6 @@ from cacheUtil import cached_with_force_update
 from common_data import financial_columns_renamed, financial_columns
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 @cached_with_force_update()

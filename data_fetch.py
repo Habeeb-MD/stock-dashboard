@@ -8,7 +8,6 @@ import yfinance as yf
 from cacheUtil import cached_with_force_update
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 @cached_with_force_update()

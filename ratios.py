@@ -7,7 +7,6 @@ import data_fetch
 from cacheUtil import cached_with_force_update
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 def _handle_division(numerator, denominator):

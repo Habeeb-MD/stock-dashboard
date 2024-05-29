@@ -9,7 +9,6 @@ from common_data import stock_dataframe_column_config
 
 # Create and configure logger
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
 
 @cached_with_force_update()
