@@ -1,0 +1,23 @@
+{
+  "name": "stock-dashboard",
+  "version": "1.0.0",
+  "description": "Cypress test cases for stock dashboard",
+  "scripts": {
+    "start": "cypress open",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Habeeb-MD/stock-dashboard.git"
+  },
+  "author": "Habeeb-MD",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Habeeb-MD/stock-dashboard/issues"
+  },
+  "homepage": "https://github.com/Habeeb-MD/stock-dashboard#readme",
+  "devDependencies": {
+    "cypress": "^13.10.0",
+    "cypress-iframe": "^1.0.1"
+  }
+}
