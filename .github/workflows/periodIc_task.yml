@@ -1,7 +1,9 @@
-name: Cypress Tests
+name: Cypress Daily Run
 
-on: push
-
+on:
+  # Triggers the workflow every day at 7am, 3pm and 11pm (3 times at a gap of 8 hours)
+  schedule:
+    - cron: "0 07,15,23 * * *"
 jobs:
   cypress-run:
     runs-on: ubuntu-24.04
