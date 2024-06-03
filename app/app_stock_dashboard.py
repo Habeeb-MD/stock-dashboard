@@ -9,7 +9,8 @@ import streamlit_antd_components as sac
 
 # Importing functions from other modules
 import data_fetch
-from ProducerConsumer import ProducerConsumer
+from CacheUpdater import CacheUpdater
+from cacheUtil import CentralCache
 from common_data import (
     industry_dataframe_default_cols,
     industry_dataframe_all_cols,
@@ -29,7 +30,6 @@ from utils import get_app_custom_config
 st.set_page_config(layout="wide", page_title="Stock Dashboard")
 
 # Create and configure logger
-
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)",
@@ -68,18 +68,25 @@ def background_task(count):
             f"background_task :- starting cache update @{time.ctime(time.time())}"
         )
 
-        producer_consumer = ProducerConsumer(count)
+        cache_updater = CacheUpdater(count)
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-            future_to_method = {
-                executor.submit(producer_consumer.producer): "producer_future",
-                executor.submit(producer_consumer.consumer): "consumer_future",
-            }
-            # This will yield future result as they are finished
-            for future in concurrent.futures.as_completed(future_to_method):
-                method = future_to_method[future]
-                data = future.result()
-                logger.info(method + "->" + data)
+        sector_wise_stock_symbol_and_weight_dict = (
+            data_fetch.get_sector_wise_stock_symbol_and_weight()
+        )
+        sector_wise_stock_symbol_and_weight_list = list(
+            sector_wise_stock_symbol_and_weight_dict.items()
+        )
+
+        with concurrent.futures.ProcessPoolExecutor() as executor:
+
+            results = executor.map(
+                cache_updater.update_cache,
+                sector_wise_stock_symbol_and_weight_list,
+            )
+
+            # Print results of processing
+            for result in results:
+                logger.debug(result)
 
         # When both threads are done we can let the main thread know we are done updating the cache
         # and set the data_cache_available event if not already set
@@ -91,14 +98,14 @@ def background_task(count):
 
 
 def start_background_task():
-    thread = threading.Thread(
+    _thread = threading.Thread(
         target=background_task,
         args=(_cnt,),
     )
-    thread.daemon = True  # Ensure the thread does not prevent the process from exiting
+    _thread.daemon = True  # Ensure the thread does not prevent the process from exiting
     logger.info(f"background_thread created @ {time.ctime(time.time())}")
-    thread.start()
-    shared_dict["background_thread_detail"] = thread.ident
+    _thread.start()
+    shared_dict["background_thread_detail"] = _thread.ident
     logger.debug(
         "background_thread_detail :- %d", shared_dict["background_thread_detail"]
     )
@@ -112,6 +119,8 @@ def verify_password():
         logger.debug(
             f"before Background task memory consumption {resource.getrusage(resource.RUSAGE_SELF).ru_maxrss}"
         )
+        # initialize central cache
+        CentralCache.initialise()
         start_background_task()
         st.success("Background task started.")
         time.sleep(30)

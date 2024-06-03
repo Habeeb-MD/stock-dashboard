@@ -1,13 +1,57 @@
 import functools
 import logging
-
-from cachetools import TTLCache
+import multiprocessing
+import time
 
 from utils import get_app_custom_config
 
 logger = logging.getLogger(__name__)
 if get_app_custom_config("debug"):
     logger.setLevel(logging.DEBUG)
+
+
+class CentralCache:
+    # A central cache accessible to all the process leveraging multiprocessing.Manager().dict() for shared caching it
+    # Also has an option to set TTL.
+    cache = None
+    ttl = 3600
+
+    @staticmethod
+    def initialise(ttl=3600):
+        if CentralCache.cache is None:
+            manager = multiprocessing.Manager()
+            CentralCache.cache = manager.dict()
+            CentralCache.ttl = ttl
+            logger.info("Central cache initialised")
+
+    @staticmethod
+    def set(key, value):
+        # key = pickle.dumps(key)
+        timestamp = time.time()
+        CentralCache.cache.setdefault(key, (value, timestamp))
+
+    @staticmethod
+    def get(key):
+        # key = pickle.dumps(key)
+        item = CentralCache.cache.get(key)
+        if item is not None:
+            value, timestamp = item
+            if time.time() - timestamp < CentralCache.ttl:
+                return value
+            else:
+                CentralCache.cache.pop(key)
+        return None
+
+    @staticmethod
+    def exists(key):
+        # key = pickle.dumps(key)
+        return CentralCache.cache.get(key) is not None
+
+    @staticmethod
+    def drop(key):
+        # key = pickle.dumps(key)
+        if CentralCache.exists(key):
+            CentralCache.cache.pop(key)
 
 
 def cached_with_force_update(maxsize=3000, ttl=3600):
@@ -21,28 +65,34 @@ def cached_with_force_update(maxsize=3000, ttl=3600):
     """
 
     def decorator(func):
-        local_cache = TTLCache(maxsize, ttl)
+        cache_name = func.__name__
 
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             force_update = kwargs.pop("force_update", False)
-            cache_key = args
+            cache_key = func.__name__ + str(args)
 
-            if force_update or cache_key not in local_cache:
+            if force_update or not CentralCache.exists(cache_key):
                 if not force_update:
-                    logger.debug(f"Updating cache for function: {func.__name__}{args}")
-                local_cache.pop(cache_key, None)  # Clear cache entry if forcing update
+                    logger.debug(
+                        f"Unforced cache update for function: {func.__name__}{args}"
+                    )
+                CentralCache.drop(cache_key)  # Clear cache entry if forcing update
                 value = None
                 try:
                     value = func(*args, **kwargs)
-                    local_cache[cache_key] = value
+                    CentralCache.set(cache_key, value)
                 except Exception as e:
                     logger.error(
-                        f"Error in {func.__name__} with {args} and {kwargs}: {str(e)}"
+                        f"Error in {func.__name__} with args {args} and {kwargs}: {str(e)}"
                     )
+                # logger.debug(f"Calculated values for {func.__name__} with args {args}")
+                # logger.debug(value)
                 return value
 
-            return local_cache.get(cache_key)
+            # logger.debug(f"Cached values for {func.__name__} with args {args}")
+            # logger.debug(CentralCache.get(cache_key))
+            return CentralCache.get(cache_key)
 
         return wrapper
 

@@ -13,6 +13,7 @@ def get_app_custom_config(arg):
         "count": 10,
         "sleep_time": 55 * 60,  # update cache 5 minutes before cache's TTL
         "thread_details": False,
+        "cache_updater_details": False,
     }
     if arg in default_values:
         value = (
