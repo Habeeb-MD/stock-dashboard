@@ -8,6 +8,9 @@ jobs:
   cypress-run:
     runs-on: ubuntu-24.04
     steps:
+      - name: Wait for App to restart after upgrade
+        run: sleep 180
+
       - name: Checkout
         uses: actions/checkout@v4
       # Install npm dependencies, cache them correctly

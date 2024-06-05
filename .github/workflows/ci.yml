@@ -8,40 +8,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Start Streamlit application
-        env:
-          STREAMLIT_CONFIG: ${{ env.CONFIG }}
-        run: |
-          mkdir -p .streamlit
-          echo "[config]" > .streamlit/secrets.toml
-          echo "environment = 'testing'" >> .streamlit/secrets.toml
-          streamlit run app/app_stock_dashboard.py &
-
-      - name: Wait for Streamlit to start
-        run: |
-          sleep 240
-          until curl -sSf http://localhost:8501 > /dev/null; do
-          echo "Waiting for Streamlit to start..."          
-          sleep 5
-          done
-
       # Install npm dependencies, cache them correctly
       # and run all Cypress tests
       - name: Cypress run
         uses: cypress-io/github-action@v6
         with:
-          start: npm run test:staging
+          start: npm run test:prod
           browser: chrome
 
       # after the test run completes store videos and any screenshots
