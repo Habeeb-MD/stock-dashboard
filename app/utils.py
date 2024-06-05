@@ -9,11 +9,13 @@ logger = logging.getLogger(__name__)
 @cached(cache={})
 def get_app_custom_config(arg):
     default_values = {
+        "environment": "production",
         "debug": False,
         "count": 10,
         "sleep_time": 55 * 60,  # update cache 5 minutes before cache's TTL
         "thread_details": False,
         "cache_updater_details": False,
+        "cache_util_verbose_log": False,
     }
     if arg in default_values:
         value = (
@@ -24,3 +26,7 @@ def get_app_custom_config(arg):
         return value
     else:
         raise KeyError(f"Invalid config parameter {arg}")
+
+
+class CacheExpiredException(Exception):
+    pass

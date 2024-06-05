@@ -34,6 +34,14 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)",
 )
+logging.VERBOSE = 5
+logging.addLevelName(logging.VERBOSE, "VERBOSE")
+logging.Logger.verbose = lambda inst, msg, *args, **kwargs: inst.log(
+    logging.VERBOSE, msg, *args, **kwargs
+)
+logging.verbose = lambda msg, *args, **kwargs: logging.log(
+    logging.VERBOSE, msg, *args, **kwargs
+)
 logger = logging.getLogger(__name__)
 
 if get_app_custom_config("debug"):
@@ -111,22 +119,26 @@ def start_background_task():
     )
 
 
+def start_app():
+    # This will run only one time at start when application will start
+    # Once the background_thread_event is set it will not run again.
+    logger.debug(
+        f"before Background task memory consumption {resource.getrusage(resource.RUSAGE_SELF).ru_maxrss}"
+    )
+    # initialize central cache
+    CentralCache.initialise()
+    start_background_task()
+    st.success("Background task started.")
+    time.sleep(30)
+    logger.debug(
+        f"after starting background task memory consumption {resource.getrusage(resource.RUSAGE_SELF).ru_maxrss}"
+    )
+
+
 # Function to verify password and start the background task
 def verify_password():
     if st.session_state["password"] == st.secrets.credentials["password"]:
-        # This will run only one time at start when application will start
-        # Once the background_thread_event is set it will not run again.
-        logger.debug(
-            f"before Background task memory consumption {resource.getrusage(resource.RUSAGE_SELF).ru_maxrss}"
-        )
-        # initialize central cache
-        CentralCache.initialise()
-        start_background_task()
-        st.success("Background task started.")
-        time.sleep(30)
-        logger.debug(
-            f"after starting background task memory consumption {resource.getrusage(resource.RUSAGE_SELF).ru_maxrss}"
-        )
+        start_app()
     else:
         st.error("Incorrect password.")
 
@@ -140,11 +152,14 @@ if not shared_dict.get("background_thread_detail"):
     # Password input
     if "password" not in st.session_state:
         st.session_state.password = ""
-    st.text_input(
-        "Enter password to start Application:", type="password", key="password"
-    )
-    st.button("Submit", on_click=verify_password)
 
+    if get_app_custom_config("environment") != "testing":
+        st.text_input(
+            "Enter password to start Application:", type="password", key="password"
+        )
+        st.button("Submit", on_click=verify_password)
+    else:
+        start_app()
 if not data_cache_available_event.is_set():
     st.write(
         "App is starting......  \nPlease wait while cache update is in process......  \nRefresh Page to check status"

@@ -3,11 +3,15 @@ import logging
 import multiprocessing
 import time
 
-from utils import get_app_custom_config
+from utils import get_app_custom_config, CacheExpiredException
 
 logger = logging.getLogger(__name__)
+level = logging.INFO
 if get_app_custom_config("debug"):
-    logger.setLevel(logging.DEBUG)
+    level = logging.DEBUG
+if get_app_custom_config("cache_util_verbose_log"):
+    level = 5
+logger.setLevel(level)
 
 
 class CentralCache:
@@ -28,24 +32,25 @@ class CentralCache:
     def set(key, value):
         # key = pickle.dumps(key)
         timestamp = time.time()
-        CentralCache.cache.setdefault(key, (value, timestamp))
+        CentralCache.cache[key] = (value, timestamp)
 
     @staticmethod
     def get(key):
         # key = pickle.dumps(key)
-        item = CentralCache.cache.get(key)
-        if item is not None:
-            value, timestamp = item
+        if CentralCache.exists(key):
+            value, timestamp = CentralCache.cache.get(key)
+            # logger.verbose(f"timestamp: {time.time() - timestamp}")
             if time.time() - timestamp < CentralCache.ttl:
                 return value
             else:
                 CentralCache.cache.pop(key)
-        return None
+                raise CacheExpiredException("Cache expired")
+        raise KeyError("Key Not found")
 
     @staticmethod
     def exists(key):
         # key = pickle.dumps(key)
-        return CentralCache.cache.get(key) is not None
+        return key in CentralCache.cache
 
     @staticmethod
     def drop(key):
@@ -65,7 +70,17 @@ def cached_with_force_update(maxsize=3000, ttl=3600):
     """
 
     def decorator(func):
-        cache_name = func.__name__
+
+        def evaluate(cache_key, funct, *args, **kwargs):
+            try:
+                value = funct(*args, **kwargs)
+                CentralCache.set(cache_key, value)
+                return value
+            except Exception as e:
+                logger.error(
+                    f"Error in {funct.__name__} with args {args} and {kwargs}: {str(e)}"
+                )
+            return None
 
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -78,21 +93,29 @@ def cached_with_force_update(maxsize=3000, ttl=3600):
                         f"Unforced cache update for function: {func.__name__}{args}"
                     )
                 CentralCache.drop(cache_key)  # Clear cache entry if forcing update
-                value = None
-                try:
-                    value = func(*args, **kwargs)
-                    CentralCache.set(cache_key, value)
-                except Exception as e:
-                    logger.error(
-                        f"Error in {func.__name__} with args {args} and {kwargs}: {str(e)}"
-                    )
-                # logger.debug(f"Calculated values for {func.__name__} with args {args}")
-                # logger.debug(value)
+
+                logger.verbose(
+                    f"Calculating values for {func.__name__} with args {args}"
+                )
+                value = evaluate(cache_key, func, *args, **kwargs)
+
+                # logger.verbose(value)
                 return value
 
-            # logger.debug(f"Cached values for {func.__name__} with args {args}")
-            # logger.debug(CentralCache.get(cache_key))
-            return CentralCache.get(cache_key)
+            else:
+                try:
+                    logger.verbose(
+                        f"Using Cached values for {func.__name__} with args {args}"
+                    )
+                    value = CentralCache.get(cache_key)
+                    # logger.verbose(f"{cache_key} :- {value}")
+                    return value
+                except (CacheExpiredException, KeyError) as exception:
+                    logger.debug(exception)
+                    value = func(*args, **kwargs)
+                    return value
+                except Exception as e:
+                    logger.error(e)
 
         return wrapper
 
