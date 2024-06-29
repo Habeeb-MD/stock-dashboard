@@ -153,7 +153,7 @@ if not shared_dict.get("background_thread_detail"):
     if "password" not in st.session_state:
         st.session_state.password = ""
 
-    if get_app_custom_config("environment") != "testing":
+    if get_app_custom_config("environment") != "development":
         st.text_input(
             "Enter password to start Application:", type="password", key="password"
         )
