@@ -46,7 +46,7 @@ def get_tickers_weight():
         headers = {"User-Agent": "PostmanRuntime/7.38.0"}
         response = requests.get(url, headers=headers)
         data = pd.read_html(StringIO(response.text))[0]
-        tickers_weight = data[["Symbol", "Portfolio%"]].set_index("Symbol")
+        tickers_weight = data[["Symbol", "Weight"]].set_index("Symbol")
         return tickers_weight
     except requests.RequestException as e:
         logger.error(f"HTTP error occurred: {e}")
@@ -93,7 +93,7 @@ def get_sector_wise_stock_symbol_and_weight():
             [tickers_sector, tickers_weight], axis=1, join="inner"
         )
         tickers_weight_sector["Portfolio%"] = (
-            tickers_weight_sector["Portfolio%"].str.rstrip("%").astype(float)
+            tickers_weight_sector["Weight"].str.rstrip("%").astype(float)
         )
         tickers_weight_sector = tickers_weight_sector.sort_values(
             by="Portfolio%", ascending=False
