@@ -1,0 +1,51 @@
+name: Playwright Daily Tests
+
+on:
+  schedule:
+    - cron: "0 00,08,16 * * *"
+  workflow_dispatch:  # Allows manual triggering
+
+jobs:
+  daily-test:
+    name: Daily Playwright Tests
+    timeout-minutes: 60
+    runs-on: ubuntu-24.04
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      
+      # Run Playwright tests
+      - name: Run Playwright tests
+        run: npm run test:prod
+        
+      # Upload test report on completion
+      - name: Upload test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-daily-report
+          path: playwright-report/
+          retention-days: 14
+          
+      # Optional: Send notification on failure
+      - name: Send notification on failure
+        if: failure()
+        run: echo "Add notification command here (e.g., Slack, email)"
+        # Example if using Slack:
+        # uses: rtCamp/action-slack-notify@v2
+        # env:
+        #   SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        #   SLACK_MESSAGE: "Daily Playwright tests failed! See report: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"

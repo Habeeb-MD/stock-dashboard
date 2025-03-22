@@ -1,0 +1,7 @@
+app_env
+app/__pycache__
+node_modules
+playwright-report
+.idea
+playwright/tests
+test-results

@@ -1,13 +1,19 @@
 {
   "name": "stock-dashboard",
   "version": "1.0.0",
-  "description": "Cypress test cases for stock dashboard",
+  "description": "Playwright test suite for stock dashboard",
   "scripts": {
-    "test:": "cypress run",
-    "test:staging": "cypress run --config baseUrl=http://localhost:8501",
-    "test:prod": "cypress run --config baseUrl=https://stock-dashboard-sp500.streamlit.app",
-    "open:prod": "cypress open",
-    "open": "cypress open --config baseUrl=http://localhost:8501"
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:headed_prod": "BASE_URL=https://stock-dashboard-sp500.streamlit.app playwright test --ui",
+    "test:staging": "playwright test --project=chromium",
+    "test:prod": "BASE_URL=https://stock-dashboard-sp500.streamlit.app playwright test",
+    "test:debug": "playwright test --debug",
+    "ui": "playwright test --ui",
+    "report": "playwright show-report",
+    "install:browsers": "playwright install chromium",
+    "codegen": "playwright codegen",
+    "lint": "eslint ."
   },
   "repository": {
     "type": "git",
@@ -20,7 +26,9 @@
   },
   "homepage": "https://github.com/Habeeb-MD/stock-dashboard#readme",
   "devDependencies": {
-    "cypress": "^13.10.0",
-    "cypress-iframe": "^1.0.1"
+    "@playwright/test": "^1.42.1",
+    "@types/node": "^20.11.30",
+    "eslint": "^8.57.0",
+    "eslint-plugin-playwright": "^0.22.0"
   }
 }
