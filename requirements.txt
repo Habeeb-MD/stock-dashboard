@@ -4,5 +4,5 @@ plotly==5.22.0
 requests==2.31.0
 streamlit==1.34.0
 streamlit-antd-components==0.3.2
-yfinance==0.2.61
+yfinance==0.2.63
 lxml==5.3.1
