@@ -23,7 +23,11 @@ def get_tickers_sector():
     """
     try:
         url = "https://en.wikipedia.org/wiki/List_of_S%26P_500_companies"
-        data = pd.read_html(url)[0]
+        
+        # Define a standard browser User-Agent
+        storage_options = {"User-Agent": "Mozilla/5.0"}
+        
+        data = pd.read_html(url, storage_options=storage_options)[0]
         tickers_sector = data[["Symbol", "GICS Sector"]].set_index("Symbol")
         return tickers_sector
     except Exception as e:
